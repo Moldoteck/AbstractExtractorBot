@@ -1,12 +1,12 @@
+The main purpose of this bot is to find links to PubMed And Nature journals in group/private chats on Telegram, get their abstracts and reply with a Telegraph link, containing this summary of this text and it's translation to russian language. This could help to read and understand very fast what is paper about
+
 # Telegram bot based on telegraf.js.org
 
 Inspired from https://github.com/backmeupplz/telegraf-template
 
-The main purpose of this bot is to find links to PubMed in group chats on Telegram, combine their abstracts, results or conclusions and reply with a Telegraph link, containing this text. This will help to read and understand very fast what is paper about
-
 # Installation and local launch
 
-1. Clone this repo: `git clone https://github.com/Moldoteck/PubMedExtractorBot`
+1. Clone this repo: `git clone https://github.com/Moldoteck/AbstractExtractorBot`
 2. Launch the [mongo database](https://www.mongodb.com/) locally
 3. Create `.env` with the environment variables listed below
 4. Add `google_api.json` file in the root folder and enable translate API in google console
