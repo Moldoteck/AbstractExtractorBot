@@ -1,0 +1,37 @@
+{
+  "name": "pubmed-extractor-bot",
+  "version": "1.0.0",
+  "description": "Telegram bot for PubMed information extraction",
+  "main": "dist/app.js",
+  "repository": "https://github.com/Moldoteck/PubMedExtractorBot",
+  "author": "Moldoteck <moldotecko@gmail.com>",
+  "license": "MIT",
+  "private": false,
+  "scripts": {
+    "distribute": "yarn build-ts && node dist/app.js",
+    "develop": "concurrently -k -i -p \"[{name}]\" -n \"Node,TypeScript\" -c \"yellow.bold,cyan.bold\" \"yarn watch-js\" \"yarn watch-ts\"",
+    "build-ts": "tsc --skipLibCheck",
+    "watch-ts": "tsc -w --skipLibCheck",
+    "watch-js": "nodemon dist/app.js"
+  },
+  "devDependencies": {
+    "concurrently": "^5.2.0",
+    "nodemon": "^2.0.4"
+  },
+  "dependencies": {
+    "@typegoose/typegoose": "^7.3.0",
+    "@types/dotenv": "^8.2.0",
+    "@types/mongoose": "^5.7.32",
+    "@types/node": "^14.0.23",
+    "@google-cloud/translate": "^6.1.0",
+    "dotenv": "^8.2.0",
+    "mongoose": "^5.9.25",
+    "telegraf": "^3.38.0",
+    "telegraf-i18n": "^6.6.0",
+    "typescript": "^4.0.3",
+    "needle": "2.6.0",
+    "cheerio": "^1.0.0-rc.5",
+    "telegraph-node": "1.0.4",
+    "smmry": "^1.0.2"
+  }
+}
