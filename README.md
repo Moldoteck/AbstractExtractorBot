@@ -1,8 +1,8 @@
+
+ # Telegram bot for extracting abstracts from links to PubMed/Nature journals
+ <a href="https://t.me/PubMedExtractorBot">@PubMedExtractorBot</a><br>
 The main purpose of this bot is to find links to PubMed And Nature journals in group/private chats on Telegram, get their abstracts and reply with a Telegraph link, containing this summary of this text and it's translation to russian language. This could help to read and understand very fast what is paper about
 
-# Telegram bot based on telegraf.js.org
-
-Inspired from https://github.com/backmeupplz/telegraf-template
 
 # Installation and local launch
 
@@ -28,3 +28,5 @@ Also, please, consider looking at `.env.sample`.
 # License
 
 MIT — use for any purpose. Would be great if you could leave a note about the original developers. Thanks!
+
+Inspired from https://github.com/backmeupplz/telegraf-template
