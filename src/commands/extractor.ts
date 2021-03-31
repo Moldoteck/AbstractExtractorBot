@@ -208,15 +208,19 @@ async function getArticleInfo(ob: Article) {
                 summarisedText = abstract_info
             }
             else {
+                console.log(err)
                 summarisedText = 'System error'
             }
         }
         try {
             translatedText = await translateText(summarisedText)
+            translatedText = translatedText[0]
         } catch (err) {
+            console.log(err)
             translatedText = 'System error'
         }
     }
+    console.log([title, abstract_info, summarisedText, translatedText])
     return [title, abstract_info, summarisedText, translatedText]
 }
 
@@ -266,7 +270,7 @@ function create_pubmed_response(ctx, url, base_url) {
             const site_body = chr.load(html.body)
             const key = findPubmedID(site_body, base_url)
             const api_key = key.toString()
-            // deleteArticle(null)
+            deleteArticle(null)
             articleEntry(api_key).then((db_article) => {
                 if (db_article.telegraph_link == '' ||
                     db_article.summary == 'System error') {
