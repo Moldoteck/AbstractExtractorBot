@@ -60,7 +60,7 @@ import * as mongoose from 'mongoose'
 // Delete article
 export async function deleteArticle(ob: Article) {  
   // let filter = ob.api_key
-  await mongoose.connection.db.dropDatabase()
+  // await mongoose.connection.db.dropDatabase()
   await ArticleModel.remove({})
   
   let article = await ArticleModel.findByIdAndDelete(ob)
