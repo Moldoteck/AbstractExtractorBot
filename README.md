@@ -1,6 +1,6 @@
 
  # Telegram bot for extracting abstracts from links to PubMed/Nature journals
- <a href="https://t.me/PubMedExtractorBot">@PubMedExtractorBot</a><br>
+ <a href="https://t.me/AbstractExtractorBot">@AbstractExtractorBot</a><br>
 The main purpose of this bot is to find links to PubMed And Nature journals in group/private chats on Telegram, get their abstracts and reply with a Telegraph link, containing this summary of this text and it's translation to russian language. This could help to read and understand very fast what is paper about
 
 
