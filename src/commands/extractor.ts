@@ -149,16 +149,20 @@ function findVal(object, key) {
 async function getAbstractsFromPubmed(ob: Article) {
     let pbmd_id = ob.api_key
     const db_url = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=${pbmd_id}&retmode=xml`
-
     var abstract = ""
     var title = ""
     let html = await ndl('get', db_url)
     const abstract_info = findVal(html.body, 'Abstract')
+    const publication_date = findVal(html.body, 'PubDate')
+
     if (abstract_info !== undefined) {
         title = findVal(html.body, 'ArticleTitle').value
         abstract_info.children.forEach(element => {
             abstract += element.value + "\n\n"
         });
+        if (publication_date !== undefined) {
+            title += publication_date.children[0].value
+        }
     }
     return [title, ['Abstract', abstract]]
 }
@@ -274,7 +278,7 @@ function create_pubmed_response(ctx, url, base_url) {
             const site_body = chr.load(html.body)
             const key = findPubmedID(site_body, base_url)
             const api_key = key.toString()
-            // deleteArticle(null)
+            deleteArticle(null)
             articleEntry(api_key).then((db_article) => {
                 if (db_article.telegraph_link == '' ||
                     db_article.summary == 'System error') {
