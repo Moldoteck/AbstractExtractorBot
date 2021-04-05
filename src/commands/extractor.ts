@@ -120,7 +120,7 @@ function findPubmedID(site_body, base_url) {
         var nature_id = site_body('p[class="c-bibliographic-information__citation"]').text()
         nature_id = nature_id.match(/\bhttps?:\/\/\S+/gi)[0]
         nature_id = nature_id.substring(8)
-        nature_id = nature_id.replace('.org','')
+        nature_id = nature_id.replace('.org', '')
         return nature_id
     }
     return undefined
@@ -147,7 +147,7 @@ function findVal(object, key) {
 }
 
 async function getAbstractsFromPubmed(ob: Article) {
-    let pbmd_id=ob.api_key
+    let pbmd_id = ob.api_key
     const db_url = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=${pbmd_id}&retmode=xml`
 
     var abstract = ""
@@ -165,13 +165,13 @@ async function getAbstractsFromPubmed(ob: Article) {
 
 async function getAbstractsFromNature(ob: Article) {
     let nature_doi = ob.api_key
-    
+
     const db_url = `http://api.springernature.com/metadata/json/${nature_doi}?api_key=${process.env.NATURE_TOKEN}`
 
     var abstract = ""
     var title = ""
     let html = await ndl('get', db_url)
-    return [html.body.records[0].title, ['Abstract',html.body.records[0].abstract]]
+    return [html.body.records[0].title, ['Abstract', html.body.records[0].abstract]]
 }
 
 async function summarizeText(text: string): Promise<string> {
@@ -187,14 +187,13 @@ async function getArticleInfo(ob: Article) {
     var translatedText: string = ''
     var title = ''
     var abstract_info = ''
-    
+
     if (ob.source == 'pubmed') {
         let abstract_inf = await getAbstractsFromPubmed(ob)
         abstract_info = abstract_inf[1][1]
         title = abstract_inf[0].toString()
     }
-    else if (ob.source == 'nature')
-    {
+    else if (ob.source == 'nature') {
         let abstract_inf = await getAbstractsFromNature(ob)
         abstract_info = abstract_inf[1][1]
         title = abstract_inf[0].toString()
@@ -223,10 +222,10 @@ async function getArticleInfo(ob: Article) {
     return [title, abstract_info, summarisedText, translatedText]
 }
 
-async function updateDBEntry(ob: Article, api_key: string, source:string) {
+async function updateDBEntry(ob: Article, api_key: string, source: string) {
     ob.api_key = api_key
     ob.source = source
-    
+
     let info = await getArticleInfo(ob)
     if (info[1] !== '') {
         ob.summary = info[2].toString()
@@ -234,18 +233,24 @@ async function updateDBEntry(ob: Article, api_key: string, source:string) {
         ob.summary_translation = info[3]
         ob.title = info[0]
     }
-    
+
     let db_entry = await pushArticleEntry(ob)
     return db_entry
 }
 
-async function createTelegraphPage(ctx: Context, ob: Article) {
+async function createTelegraphPage(ctx: Context, ob: Article, url: string) {
     if (ob.abstracts !== '') {
         const ph = new telegraph()
         const random_token = process.env.TELEGRAPH_TOKEN
-
-        let content = 'Сгенерированная сводка:\n\n' + ob.summary_translation + '\n\nAbstract:\n\n' + ob.abstracts
-        let page = await ph.createPage(random_token, ob.title, [{ tag: 'h1', children: [content] }], {
+        let article = { tag: 'a', attrs: { 'href': `${url}` }, children: ['Link\n\n'] }
+        let translated_title = await translateText(ob.title)
+        translated_title = translated_title[0]
+        translated_title = { tag: 'h2', children: [{ tag: 'b', children: [translated_title, '\n\n'] }] }
+        let sum = { tag: 'h2', children: [{ tag: 'b', children: ['Сгенерированная сводка:\n\n'] }] }
+        let abs = { tag: 'h2', children: [{ tag: 'b', children: ['\n\nAbstract:\n\n'] }] }
+        // let content = ob.summary_translation + '\n\nAbstract:\n\n' + ob.abstracts
+        let content_dict = { tag: 'h1', children: [ob.summary_translation, abs, ob.abstracts] }
+        let page = await ph.createPage(random_token, ob.title, [article, translated_title, sum, content_dict], {
             return_content: true
         })
         ob.telegraph_link = page.url
@@ -264,20 +269,20 @@ async function sendResponse(ctx, ob: Article) {
 }
 
 function create_pubmed_response(ctx, url, base_url) {
-    ndl('get',url, {follow_max:5})
+    ndl('get', url, { follow_max: 5 })
         .then(function (html) {
             const site_body = chr.load(html.body)
             const key = findPubmedID(site_body, base_url)
             const api_key = key.toString()
-            // deleteArticle(null)
+            deleteArticle(null)
             articleEntry(api_key).then((db_article) => {
                 if (db_article.telegraph_link == '' ||
                     db_article.summary == 'System error') {
                     console.log('getting info')
-                    
-                    let source= isPubmedLink(base_url) ? 'pubmed':'nature'
+
+                    let source = isPubmedLink(base_url) ? 'pubmed' : 'nature'
                     updateDBEntry(db_article, api_key, source).then((new_db_entry) => {
-                        createTelegraphPage(ctx, new_db_entry).then((panew_db_entryge) => {
+                        createTelegraphPage(ctx, new_db_entry, url).then((panew_db_entryge) => {
                             sendResponse(ctx, panew_db_entryge)
                         })
                     })
