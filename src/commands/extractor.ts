@@ -1,14 +1,11 @@
 // Dependencies
-import { O_RDONLY } from "constants";
-import { privateEncrypt } from "crypto";
 import { Telegraf, Context, Extra } from "telegraf";
-import { convertCompilerOptionsFromJson } from "typescript";
 const ndl = require('needle');
 const chr = require('cheerio');
 const telegraph = require('telegraph-node')
 const smmry = require('smmry')({
     SM_API_KEY: process.env.SMMRY_TOKEN,
-    SM_LENGTH: 3,
+    SM_LENGTH: 5,
     SM_WITH_BREAK: true
 });
 
@@ -102,6 +99,22 @@ function findPMCVal(prnt, object, key, searched) {
     return alls;
 }
 
+function findPMCID(site_body, base_url) {
+    if (base_url == ncbi_url) {
+        let pm_id = site_body('div[class="fm-citation-pmcid"]').text().split(': ')[1].split('PMC')[1]
+        if (pm_id == undefined)
+            pm_id = ''
+        return pm_id
+    }
+    if (base_url == pubmed_url) {
+        let pm_id = site_body('a[class="id-link"]').first().text().split('PMC')[1]
+        if (pm_id == undefined)
+            pm_id = ''
+
+        return pm_id
+    }
+    return undefined
+}
 function findPubmedID(site_body, base_url) {
     if (base_url == ncbi_url) {
         let pm_id = site_body('div[class="fm-citation-pmid"]').text().split(': ')[1]
@@ -145,8 +158,30 @@ function findVal(object, key) {
     });
     return value;
 }
+var xpath = require('xpath')
+    , dom = require('xmldom').DOMParser
+async function abstr_pmc(id) {
 
-async function getAbstractsFromPubmed(ob: Article) {
+    const db_url = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pmc&id=${id}`
+    // console.log(db_url)
+    var abstract = ""
+    var title = ""
+    let html = await ndl('get', db_url, { parse: false })
+    let bd = html.body
+
+    let types = ['Conclusion', 'Result']
+    let i = 0
+    let final = []
+    var doc = new dom().parseFromString(bd)
+    for (i = 0; i < types.length; ++i) {
+        var nodes = xpath.select(`//sec[title/text()[contains(.,'${types[i]}')]]//p/text()`, doc)
+        if (nodes.length != 0) {
+            final.push([types[i], nodes.toString()])
+        }
+    }
+    return final
+}
+async function getAbstractsFromPubmed(ob: Article, pmcid) {
     let pbmd_id = ob.api_key
     const db_url = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=${pbmd_id}&retmode=xml`
     var abstract = ""
@@ -164,7 +199,11 @@ async function getAbstractsFromPubmed(ob: Article) {
             title += publication_date.children[0].value
         }
     }
-    return [title, ['Abstract', abstract]]
+    let final = [['Abstract', abstract]]
+    if (pmcid != undefined) {
+        final.push(...await abstr_pmc(pmcid))
+    }
+    return [title, final]
 }
 
 async function getAbstractsFromNature(ob: Article) {
@@ -186,15 +225,22 @@ async function summarizeText(text: string): Promise<string> {
     return summary.toString()
 }
 
-async function getArticleInfo(ob: Article) {
+async function getArticleInfo(ob: Article, pmcid) {
     var summarisedText: string = ''
     var translatedText: string = ''
     var title = ''
     var abstract_info = ''
+    var other_abstract = ''
 
     if (ob.source == 'pubmed') {
-        let abstract_inf = await getAbstractsFromPubmed(ob)
-        abstract_info = abstract_inf[1][1]
+        let abstract_inf = await getAbstractsFromPubmed(ob, pmcid)
+        abstract_info = abstract_inf[1][0][1]
+        if (abstract_inf[1].length > 1) {
+            let i = 1
+            for (i = 1; i < abstract_inf[1].length; ++i) {
+                other_abstract += abstract_inf[1][i][0] + '\n\n' + abstract_inf[1][i][1] + '\n\n'
+            }
+        }
         title = abstract_inf[0].toString()
     }
     else if (ob.source == 'nature') {
@@ -202,10 +248,15 @@ async function getArticleInfo(ob: Article) {
         abstract_info = abstract_inf[1][1]
         title = abstract_inf[0].toString()
     }
-
+console.log(other_abstract)
     if (abstract_info !== '') {
         try {
-            summarisedText = await summarizeText(abstract_info)
+            if (other_abstract.length == 0) {
+                summarisedText = await summarizeText(abstract_info)
+            }
+            else {
+                summarisedText = await summarizeText(other_abstract)
+            }
         } catch (err) {
             if (err.toString().includes('TEXT IS TOO SHORT')) {
                 summarisedText = abstract_info
@@ -217,20 +268,25 @@ async function getArticleInfo(ob: Article) {
         }
         try {
             translatedText = await translateText(summarisedText)
+
             translatedText = translatedText[0]
         } catch (err) {
             console.log(err)
             translatedText = 'System error'
         }
     }
-    return [title, abstract_info, summarisedText, translatedText]
+    if (other_abstract.length > 0) {
+        return [title, other_abstract, summarisedText, translatedText]
+    } else {
+        return [title, abstract_info, summarisedText, translatedText]
+    }
 }
 
-async function updateDBEntry(ob: Article, api_key: string, source: string) {
+async function updateDBEntry(ob: Article, api_key: string, source: string, pmcid) {
     ob.api_key = api_key
     ob.source = source
 
-    let info = await getArticleInfo(ob)
+    let info = await getArticleInfo(ob, pmcid)
     if (info[1] !== '') {
         ob.summary = info[2].toString()
         ob.abstracts = info[1]
@@ -272,20 +328,21 @@ async function sendResponse(ctx, ob: Article) {
     }
 }
 
-function create_pubmed_response(ctx, url, base_url) {
+async function create_pubmed_response(ctx, url, base_url) {
     ndl('get', url, { follow_max: 5 })
         .then(function (html) {
             const site_body = chr.load(html.body)
             const key = findPubmedID(site_body, base_url)
+            const pmcid = findPMCID(site_body, base_url)
             const api_key = key.toString()
-            // deleteArticle(null)
+            deleteArticle(null)
             articleEntry(api_key).then((db_article) => {
                 if (db_article.telegraph_link == '' ||
                     db_article.summary == 'System error') {
                     console.log('getting info')
 
                     let source = isPubmedLink(base_url) ? 'pubmed' : 'nature'
-                    updateDBEntry(db_article, api_key, source).then((new_db_entry) => {
+                    updateDBEntry(db_article, api_key, source, pmcid).then((new_db_entry) => {
                         createTelegraphPage(ctx, new_db_entry, url).then((panew_db_entryge) => {
                             sendResponse(ctx, panew_db_entryge)
                         })

@@ -32,6 +32,8 @@
     "needle": "2.6.0",
     "cheerio": "^1.0.0-rc.5",
     "telegraph-node": "1.0.4",
-    "smmry": "^1.0.2"
+    "smmry": "^1.0.2",
+    "xpath":"^0.0.32",
+    "xmldom":"^0.6.0"
   }
 }
