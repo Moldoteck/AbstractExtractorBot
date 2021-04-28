@@ -248,7 +248,7 @@ async function getArticleInfo(ob: Article, pmcid) {
         abstract_info = abstract_inf[1][1]
         title = abstract_inf[0].toString()
     }
-console.log(other_abstract)
+// console.log(other_abstract)
     if (abstract_info !== '') {
         try {
             if (other_abstract.length == 0) {
@@ -335,7 +335,7 @@ async function create_pubmed_response(ctx, url, base_url) {
             const key = findPubmedID(site_body, base_url)
             const pmcid = findPMCID(site_body, base_url)
             const api_key = key.toString()
-            deleteArticle(null)
+            // deleteArticle(null)
             articleEntry(api_key).then((db_article) => {
                 if (db_article.telegraph_link == '' ||
                     db_article.summary == 'System error') {
